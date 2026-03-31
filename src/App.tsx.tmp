@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -11,7 +11,7 @@ import Admin from './pages/Admin';
 
 const App: React.FC = () => {
   const location = useLocation();
-  const isAdminPage = location.pathname === '/admin' || location.pathname === '/login';
+  const isAdminPage = location.pathname.startsWith('/admin') || location.pathname.startsWith('/login');
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -31,4 +31,15 @@ const App: React.FC = () => {
   );
 };
 
+// Wrapper for useLocation
+const AppWrapper: React.FC = () => {
+  return (
+    <Router>
+      <App />
+    </Router>
+  );
+};
+
+// Wait, the user already has Router setup outside probably if App was already using Routes
+// Checking main.tsx just in case
 export default App;
