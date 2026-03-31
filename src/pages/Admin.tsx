@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  LogOut, Settings, FileText, ChevronLeft, Save, RefreshCw, Search, Menu, X, Check, ChevronRight
+  LogOut, Settings, FileText, ChevronLeft, Save, RefreshCw, Search, Menu, X, Check, ChevronRight, Plus, Trash2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,9 +62,19 @@ const Admin: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
+  const handleToggleRow = (id: string) => {
+    if (expandedId === id && dirtyIds.has(id)) {
+      if (!window.confirm("Vos modifications du bilan financier n'ont pas été enregistrées.\nVoulez-vous vraiment fermer le dossier sans sauvegarder ?")) {
+        return;
+      }
+    }
+    setExpandedId(expandedId === id ? null : id);
+  };
+
   const [whatsAppConfig, setWhatsAppConfig] = useState<WhatsAppConfig>({
     phone_number: '',
     message_template_study: "Bonjour, je viens de remplir le formulaire de dossier sur le site et je souhaiterais connaître les frais d'étude.",
@@ -84,6 +94,10 @@ const Admin: React.FC = () => {
     checkAuth();
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    if (currentPage !== 1) setCurrentPage(1);
+  }, [searchTerm, activeTab]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -142,6 +156,7 @@ const Admin: React.FC = () => {
   };
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
+    setSaving(true);
     try {
       const { error } = await supabase.from('tolito_espagne_immigration_evaluations').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
@@ -149,6 +164,8 @@ const Admin: React.FC = () => {
       setToast({ message: `Statut mis à jour`, type: 'success' });
     } catch (err) {
       setToast({ message: 'Erreur mise à jour statut', type: 'error' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -161,6 +178,7 @@ const Admin: React.FC = () => {
       }).eq('id', id);
       if (error) throw error;
       setEvaluations(prev => prev.map(e => e.id === id ? { ...e, paid_amount: paidAmount, payment_plan: paymentPlan } : e));
+      setDirtyIds(prev => { const n = new Set(prev); n.delete(id); return n; });
       setToast({ message: `Finances enregistrées`, type: 'success' });
     } catch (err: any) {
       setToast({ message: 'Erreur enregistrement finances', type: 'error' });
@@ -200,10 +218,107 @@ const Admin: React.FC = () => {
     `${e.first_name} ${e.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredEvaluations.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredEvaluations.length / itemsPerPage);
   const paginatedEvaluations = filteredEvaluations.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const renderFinanceBlock = (e: any) => (
+    <div className="bg-white p-5 lg:p-6 border border-black/5 rounded-sm space-y-6 shadow-sm">
+       <div>
+          <div className="text-[10px] font-bold uppercase text-black/40 mb-2 flex justify-between items-center">
+             <span>Statut du Dossier</span>
+             {saving && <RefreshCw size={12} className="animate-spin text-[#0D1B2A]/40" />}
+          </div>
+          <select disabled={saving} value={e.status} onChange={ev=>handleUpdateStatus(e.id, ev.target.value)} className="w-full bg-[#0D1B2A] text-[#C9A84C] py-3 px-4 rounded-sm text-[12px] font-bold uppercase tracking-widest outline-none shadow-md disabled:opacity-50">
+             {[
+               {v:'En attente', l:'En attente'},
+               {v:'En cours', l:'Etude en cours'},
+               {v:'Accepté', l:'Dossier Accepté'},
+               {v:'Payé', l:'Frais Réglés'},
+               {v:'Refusé', l:'Dossier Refusé'}
+             ].map(s=><option key={s.v} value={s.v}>{s.l}</option>)}
+          </select>
+       </div>
+
+       <div className="space-y-4 pt-4 border-t border-black/5">
+         <div className="flex items-center justify-between">
+            <div className="text-[10px] font-bold uppercase text-black/40 tracking-widest">Acomptes Reçus</div>
+            <button 
+              onClick={() => {
+                const newPlan = [...(e.payment_plan || []), { title: 'Frais de ...', amount: 0 }];
+                setEvaluations(prev => prev.map(ev => ev.id === e.id ? { ...ev, payment_plan: newPlan } : ev));
+                setDirtyIds(prev => new Set(prev).add(e.id));
+              }}
+              className="text-[10px] font-bold text-[#C9A84C] flex items-center gap-1 hover:underline active:scale-95 transition-transform"
+            >
+              <Plus size={12} /> AJOUTER
+            </button>
+         </div>
+         <div className="space-y-3">
+            {(e.payment_plan || []).map((p: any, pIdx: number) => (
+              <div key={pIdx} className="flex items-center gap-3 bg-slate-50/50 p-2 rounded-sm border border-black/5">
+                 <input 
+                   disabled={saving}
+                   className="flex-1 min-w-0 bg-transparent border-none text-[12px] font-bold text-[#0D1B2A] outline-none disabled:opacity-50"
+                   value={p.title} 
+                   onChange={(evt) => {
+                     const newPlan = [...e.payment_plan];
+                     newPlan[pIdx].title = evt.target.value;
+                     setEvaluations(prev => prev.map(ev => ev.id === e.id ? { ...ev, payment_plan: newPlan } : ev));
+                     setDirtyIds(prev => new Set(prev).add(e.id));
+                   }}
+                 />
+                 <div className="relative w-20 sm:w-24 shrink-0">
+                   <input 
+                     type="number" 
+                     disabled={saving}
+                     value={p.amount}
+                     onChange={(evt) => {
+                       const newPlan = [...e.payment_plan];
+                       newPlan[pIdx].amount = parseFloat(evt.target.value) || 0;
+                       setEvaluations(prev => prev.map(ev => ev.id === e.id ? { ...ev, payment_plan: newPlan } : ev));
+                       setDirtyIds(prev => new Set(prev).add(e.id));
+                     }}
+                     className="w-full bg-white border border-black/5 px-2 py-1 text-[12px] font-bold text-[#0D1B2A] text-right rounded-sm outline-none disabled:opacity-50"
+                   />
+                   <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-black/20 font-bold">€</span>
+                 </div>
+                 <button 
+                   disabled={saving}
+                   onClick={() => {
+                     const newPlan = e.payment_plan.filter((_: any, i: number) => i !== pIdx);
+                     setEvaluations(prev => prev.map(ev => ev.id === e.id ? { ...ev, payment_plan: newPlan } : ev));
+                     setDirtyIds(prev => new Set(prev).add(e.id));
+                   }}
+                   className="p-1.5 text-rose-500 hover:bg-rose-50 rounded transition-colors disabled:opacity-50 shrink-0"
+                 >
+                    <Trash2 size={12} />
+                 </button>
+              </div>
+            ))}
+         </div>
+       </div>
+
+       <div className="pt-4 border-t border-black/5 space-y-4">
+         <div>
+           <div className="text-[10px] font-bold uppercase text-black/40 mb-2">Montant Total Fixé pour le Service (€)</div>
+           <input type="number" value={e.paid_amount} onChange={ev=>{const val=parseFloat(ev.target.value)||0; setEvaluations(prev=>prev.map(it=>it.id===e.id?{...it,paid_amount:val}:it)); setDirtyIds(prev => new Set(prev).add(e.id));}} className="w-full border border-black/5 py-3 px-4 rounded-sm text-[16px] font-bold outline-none focus:border-[#C9A84C] transition-colors" />
+         </div>
+
+         <div className="p-4 bg-rose-50 rounded-sm border border-rose-100 flex justify-between items-center">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase text-rose-700">Reste à percevoir</span>
+            <span className="text-[18px] sm:text-[20px] font-bold text-rose-800">
+              {Math.max(0, (e.paid_amount || 0) - (e.payment_plan || []).reduce((acc: any, curr: any) => acc + curr.amount, 0))} €
+            </span>
+         </div>
+       </div>
+
+       <button disabled={saving} onClick={()=>handleUpdateFinance(e.id,e.paid_amount,e.payment_plan || [])} className="w-full bg-[#C9A84C] text-[#0D1B2A] py-3 rounded-sm text-[11px] font-bold uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+          {saving ? <><RefreshCw size={14} className="animate-spin" /> ENREGISTREMENT...</> : 'Enregistrer le Bilan Financier'}
+       </button>
+    </div>
   );
 
   return (
@@ -219,7 +334,7 @@ const Admin: React.FC = () => {
          </button>
       </div>
 
-      <aside className={`fixed lg:static inset-y-0 left-0 w-[280px] bg-[#0D1B2A] text-white flex flex-col z-[100] transition-transform duration-500 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed lg:sticky lg:top-0 lg:h-screen shrink-0 inset-y-0 left-0 w-[280px] bg-[#0D1B2A] text-white flex flex-col z-[100] transition-transform duration-500 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-10 border-b border-white/5 hidden lg:block">
            <h1 className="font-serif text-[24px]">TOLITO</h1>
         </div>
@@ -276,7 +391,7 @@ const Admin: React.FC = () => {
                      {loading ? (
                         <div className="p-10 text-center text-[15px] text-black/60 font-semibold uppercase tracking-widest">Synchronisation...</div>
                      ) : paginatedEvaluations.map((e) => (
-                         <div key={e.id} onClick={() => setExpandedId(expandedId === e.id ? null : e.id)} className="p-8 space-y-5 bg-white active:bg-slate-50 border-b border-black/[0.1] transition-colors cursor-pointer">
+                         <div key={e.id} onClick={() => handleToggleRow(e.id)} className="p-8 space-y-5 bg-white active:bg-slate-50 border-b border-black/[0.1] transition-colors cursor-pointer">
                             <div className="flex items-center justify-between">
                                <div className="font-bold text-[20px] text-[#0D1B2A] leading-tight">{e.first_name} {e.last_name}</div>
                                <span className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border border-black/5 ${getStatusBadge(e.status)}`}>{e.status}</span>
@@ -290,7 +405,7 @@ const Admin: React.FC = () => {
                                </div>
                             </div>
                             {expandedId === e.id && (
-                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="pt-6 border-t border-black/5 space-y-8">
+                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="pt-6 border-t border-black/5 space-y-8" onClick={(ev) => ev.stopPropagation()}>
                                 <div className="grid grid-cols-2 gap-x-6 gap-y-6 text-[15px] pb-6">
                                    {[
                                      {l: 'Email', v: e.email}, {l: 'WhatsApp', v: e.phone},
@@ -318,10 +433,10 @@ const Admin: React.FC = () => {
                                       })}
                                    </div>
                                 </div>
-                                <div className="p-4 bg-emerald-50 rounded-sm border border-emerald-100">
-                                   <div className="text-[10px] font-bold uppercase text-emerald-700 mb-1">Montant Payé</div>
-                                   <div className="text-[20px] font-bold text-emerald-800">{e.paid_amount || 0} €</div>
-                                </div>
+                                 <div className="space-y-4 mb-4">
+                                    <div className="text-[10px] font-bold uppercase text-black/30 tracking-widest">Gestion & Finances</div>
+                                    {renderFinanceBlock(e)}
+                                 </div>
                              </motion.div>
                             )}
                          </div>
@@ -344,7 +459,7 @@ const Admin: React.FC = () => {
                          <tbody className="divide-y divide-black/[0.05]">
                             {paginatedEvaluations.map((e) => (
                                <React.Fragment key={e.id}>
-                                 <tr onClick={() => setExpandedId(expandedId === e.id ? null : e.id)} className={`hover:bg-slate-50 group transition-colors cursor-pointer ${expandedId === e.id ? 'bg-slate-50' : ''}`}>
+                                 <tr onClick={() => handleToggleRow(e.id)} className={`hover:bg-slate-50 group transition-colors cursor-pointer ${expandedId === e.id ? 'bg-slate-50' : ''}`}>
                                     <td className="px-10 py-8">
                                        <div className="font-bold text-[17px] text-[#0D1B2A]">{e.first_name} {e.last_name}</div>
                                        <div className="text-[11px] text-black/30 font-bold uppercase tracking-widest mt-1">Ref: {e.id.slice(0, 8).toUpperCase()}</div>
@@ -361,15 +476,15 @@ const Admin: React.FC = () => {
                                         <div className="grid grid-cols-3 gap-12">
                                            <div className="space-y-8">
                                               <h4 className="text-[11px] font-bold uppercase tracking-widest text-black/30">Fiche Client</h4>
-                                              <div className="grid grid-cols-1 gap-6">
+                                              <div className="grid grid-cols-2 gap-4">
                                                  {[
                                                    {l:'Email',v:e.email},{l:'WhatsApp',v:e.phone},{l:'Âge',v:e.age ? `${e.age} ans` : '--'},
                                                    {l:'Nationalité',v:e.nationality},{l:'Résidence',v:e.residence_country},
                                                    {l:'Casier',v:e.has_criminal_record === 'oui' ? 'Signalé' : 'Vierge'}
                                                  ].map((it,i)=>(
-                                                   <div key={i} className="border-b border-black/[0.03] pb-3">
-                                                      <div className="text-[10px] font-bold uppercase text-black/40 mb-1">{it.l}</div>
-                                                      <div className="text-[15px] font-bold text-[#0D1B2A]">{it.v}</div>
+                                                   <div key={i} className="bg-white p-4 rounded-sm border border-black/5 shadow-sm space-y-1">
+                                                      <div className="text-[9px] font-bold uppercase text-black/40">{it.l}</div>
+                                                      <div className="text-[13px] font-bold text-[#0D1B2A] truncate">{it.v}</div>
                                                    </div>
                                                  ))}
                                               </div>
@@ -390,20 +505,8 @@ const Admin: React.FC = () => {
                                            </div>
                                            <div className="space-y-8">
                                               <h4 className="text-[11px] font-bold uppercase tracking-widest text-black/30">Gestion & Finances</h4>
-                                              <div className="bg-white p-6 border border-black/5 rounded-sm space-y-6">
-                                                 <div><div className="text-[10px] font-bold uppercase text-black/40 mb-2">Statut du Dossier</div>
-                                                 <select value={e.status} onChange={ev=>handleUpdateStatus(e.id, ev.target.value)} className="w-full bg-[#0D1B2A] text-[#C9A84C] py-3 px-4 rounded-sm text-[12px] font-bold uppercase tracking-widest outline-none">
-                                                    {[
-                                                      {v:'En attente', l:'En attente'},
-                                                      {v:'En cours', l:'Etude en cours'},
-                                                      {v:'Accepté', l:'Dossier Accepté'},
-                                                      {v:'Payé', l:'Frais Réglés'},
-                                                      {v:'Refusé', l:'Dossier Refusé'}
-                                                    ].map(s=><option key={s.v} value={s.v}>{s.l}</option>)}
-                                                 </select></div>
-                                                 <div><div className="text-[10px] font-bold uppercase text-black/40 mb-2">Montant du Paiement (€)</div>
-                                                 <input type="number" value={e.paid_amount} onChange={ev=>{const val=parseFloat(ev.target.value)||0; setEvaluations(prev=>prev.map(it=>it.id===e.id?{...it,paid_amount:val}:it))}} className="w-full border border-black/5 py-3 px-4 rounded-sm text-[16px] font-bold outline-none" /></div>
-                                                 <button onClick={()=>handleUpdateFinance(e.id,e.paid_amount,e.payment_plan || [])} className="w-full bg-[#C9A84C] text-[#0D1B2A] py-3 rounded-sm text-[11px] font-bold uppercase tracking-widest">Enregistrer les Finances</button>
+                                              <div className="pt-2">
+                                                 {renderFinanceBlock(e)}
                                               </div>
                                            </div>
                                         </div>
@@ -416,17 +519,76 @@ const Admin: React.FC = () => {
                      </table>
                   </div>
 
-                  {/* PAGINATION */}
-                  {totalPages > 1 && (
-                     <div className="flex items-center justify-center gap-3 py-10 lg:py-16 border-t border-black/[0.05]">
-                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-12 h-12 rounded flex items-center justify-center border border-black/5 disabled:opacity-20 transition-all hover:bg-slate-50"><ChevronLeft size={20} /></button>
-                        <div className="flex items-center gap-2">
-                           {Array.from({ length: totalPages }).map((_, i) => (
-                              <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-12 h-12 rounded text-[13px] font-bold transition-all ${currentPage === i + 1 ? 'bg-[#0D1B2A] text-[#C9A84C]' : 'border border-black/5 hover:bg-slate-50'}`}>{i + 1}</button>
-                           ))}
-                        </div>
-                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-12 h-12 rounded flex items-center justify-center border border-black/5 disabled:opacity-20 transition-all hover:bg-slate-50"><ChevronRight size={20} /></button>
-                     </div>
+                  {/* PAGINATION STYLE FACTURE */}
+                  {filteredEvaluations.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between border-t border-black/[0.05] bg-white px-6 py-4 sm:px-10 mt-4 gap-4">
+                      <div className="w-full sm:w-auto flex justify-between sm:justify-start items-center gap-4">
+                        <p className="text-[13px] text-gray-700">
+                          <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> à <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredEvaluations.length)}</span> sur <span className="font-medium">{filteredEvaluations.length}</span>
+                        </p>
+                        <div className="w-px h-4 bg-gray-300 hidden sm:block"></div>
+                        <select 
+                           value={itemsPerPage} 
+                           onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                           className="hidden sm:block text-[13px] text-gray-700 bg-transparent outline-none cursor-pointer font-medium"
+                        >
+                           <option value={5}>5 par page</option>
+                           <option value={10}>10 par page</option>
+                           <option value={20}>20 par page</option>
+                           <option value={50}>50 par page</option>
+                        </select>
+                      </div>
+                      
+                      <div className="w-full sm:w-auto flex justify-center">
+                        <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                          <button
+                            onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          >
+                            <span className="sr-only">Précédent</span>
+                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                          </button>
+                          
+                          {Array.from({ length: totalPages }).map((_, i) => {
+                            const page = i + 1;
+                            const range = window.innerWidth < 640 ? 0 : 1;
+                            
+                            if (page === 1 || page === totalPages || (page >= currentPage - range && page <= currentPage + range)) {
+                              return (
+                                <button
+                                  key={page}
+                                  onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                                    page === currentPage
+                                      ? 'bg-[#0D1B2A] text-[#C9A84C] focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2'
+                                      : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                                  }`}
+                                >
+                                  {page}
+                                </button>
+                              );
+                            } else if ((page === currentPage - range - 1 && page > 1) || (page === currentPage + range + 1 && page < totalPages)) {
+                              return (
+                                <span key={page} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
+                                  ...
+                                </span>
+                              );
+                            }
+                            return null;
+                          })}
+
+                          <button
+                            onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                            disabled={currentPage === totalPages}
+                            className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          >
+                            <span className="sr-only">Suivant</span>
+                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                          </button>
+                        </nav>
+                      </div>
+                    </div>
                   )}
                </div>
              ) : (
