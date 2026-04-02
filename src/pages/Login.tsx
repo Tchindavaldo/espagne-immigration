@@ -45,7 +45,7 @@ const Login: React.FC = () => {
             <ShieldCheck size={40} className="text-[#C9A84C]" />
           </div>
           <h1 className="font-serif text-[32px] text-[#0D1B2A] mb-2">Espace <em className="italic text-[#C9A84C] not-serif">Admin</em></h1>
-          <p className="text-[#5A677D] text-[15px]">Accédez à la gestion des évaluations Tolito</p>
+          <p className="text-[#5A677D] text-[15px]">Accédez à la gestion des évaluations ESPAGNE IMMIGRATION</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

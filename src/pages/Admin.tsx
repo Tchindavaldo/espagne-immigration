@@ -85,7 +85,7 @@ const Admin: React.FC = () => {
     site_email: '',
     site_phone: '',
     site_address: '',
-    company_name: 'TOLITO IMMIGRATION'
+    company_name: 'ESPAGNE IMMIGRATION'
   });
 
   const navigate = useNavigate();
@@ -328,7 +328,7 @@ const Admin: React.FC = () => {
       </AnimatePresence>
 
       <div className="lg:hidden bg-[#0D1B2A] px-6 py-4 flex items-center justify-between sticky top-0 z-[100]">
-         <h1 className="text-white font-serif text-[20px]">TOLITO</h1>
+         <h1 className="text-white font-serif text-[18px]">ESPAGNE IMMIGRATION</h1>
          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-white">
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
          </button>
@@ -336,7 +336,7 @@ const Admin: React.FC = () => {
 
       <aside className={`fixed lg:sticky lg:top-0 lg:h-screen shrink-0 inset-y-0 left-0 w-[280px] bg-[#0D1B2A] text-white flex flex-col z-[100] transition-transform duration-500 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-10 border-b border-white/5 hidden lg:block">
-           <h1 className="font-serif text-[24px]">TOLITO</h1>
+           <h1 className="font-serif text-[20px]">ESPAGNE IMMIGRATION</h1>
         </div>
         <nav className="flex-1 px-6 py-10 space-y-2">
           <button onClick={() => { setActiveTab('evaluations'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-4 rounded-sm ${activeTab === 'evaluations' ? 'bg-[#C9A84C] text-[#0D1B2A] font-bold' : 'text-white/40'}`}>
@@ -410,11 +410,17 @@ const Admin: React.FC = () => {
                                    {[
                                      {l: 'Email', v: e.email}, {l: 'WhatsApp', v: e.phone},
                                      {l: 'Nation.', v: e.nationality}, {l: 'Résidence', v: e.residence_country},
-                                     {l: 'Âge', v: e.age ? `${e.age} ans` : '--'}, {l: 'Casier', v: e.has_criminal_record === 'oui' ? 'Signalé' : 'Vierge'}
+                                     {l: 'Âge', v: e.age ? `${e.age} ans` : '--'}, {l: 'Casier', v: e.has_criminal_record === 'oui' ? 'Signalé' : 'Vierge'},
+                                     ...(e.degree_level ? [{l: "Études", v: e.degree_level}] : []),
+                                     ...(e.financial_status ? [{l: 'Finances', v: e.financial_status}] : []),
+                                     ...(e.employment_status ? [{l: 'Emploi', v: e.employment_status}] : []),
+                                     ...(e.invest_amount ? [{l: 'Invest.', v: `${e.invest_amount} €`}] : []),
+                                     ...(e.situation ? [{l: 'Situation', v: e.situation, fw: true}] : []),
+                                     ...(e.message ? [{l: 'Notes/Message', v: e.message, fw: true}] : [])
                                    ].map((item, idx) => (
-                                     <div key={idx} className="border-b border-black/[0.03] pb-2">
+                                     <div key={idx} className={`border-b border-black/[0.03] pb-2 ${item.fw ? 'col-span-2' : ''}`}>
                                        <div className="text-[11px] font-bold uppercase text-black/40 mb-0.5">{item.l}</div>
-                                       <div className="font-bold text-[#0D1B2A] truncate">{item.v || '--'}</div>
+                                       <div className="font-bold text-[#0D1B2A] break-words whitespace-pre-wrap">{item.v || '--'}</div>
                                      </div>
                                    ))}
                                 </div>
@@ -480,11 +486,17 @@ const Admin: React.FC = () => {
                                                  {[
                                                    {l:'Email',v:e.email},{l:'WhatsApp',v:e.phone},{l:'Âge',v:e.age ? `${e.age} ans` : '--'},
                                                    {l:'Nationalité',v:e.nationality},{l:'Résidence',v:e.residence_country},
-                                                   {l:'Casier',v:e.has_criminal_record === 'oui' ? 'Signalé' : 'Vierge'}
+                                                   {l:'Casier',v:e.has_criminal_record === 'oui' ? 'Signalé' : 'Vierge'},
+                                                   ...(e.degree_level ? [{l: "Études", v: e.degree_level}] : []),
+                                                   ...(e.financial_status ? [{l: 'Finances', v: e.financial_status}] : []),
+                                                   ...(e.employment_status ? [{l: 'Emploi', v: e.employment_status}] : []),
+                                                   ...(e.invest_amount ? [{l: 'Investissement', v: `${e.invest_amount} €`}] : []),
+                                                   ...(e.situation ? [{l: 'Situation Actuelle', v: e.situation, fw: true}] : []),
+                                                   ...(e.message ? [{l: 'Message / Notes', v: e.message, fw: true}] : [])
                                                  ].map((it,i)=>(
-                                                   <div key={i} className="bg-white p-4 rounded-sm border border-black/5 shadow-sm space-y-1">
+                                                   <div key={i} className={`bg-white p-4 rounded-sm border border-black/5 shadow-sm space-y-1 ${it.fw ? 'col-span-2' : ''}`}>
                                                       <div className="text-[9px] font-bold uppercase text-black/40">{it.l}</div>
-                                                      <div className="text-[13px] font-bold text-[#0D1B2A] truncate">{it.v}</div>
+                                                      <div className="text-[13px] font-bold text-[#0D1B2A] break-words whitespace-pre-wrap">{it.v}</div>
                                                    </div>
                                                  ))}
                                               </div>
