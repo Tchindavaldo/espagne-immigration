@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import Toast from '../components/Toast';
 import { 
   Mail, Phone, ChevronRight, Send, CheckCircle2, 
-  User, Globe, Briefcase, FileText, Landmark, FileCheck, RefreshCw, MessageCircle, Check
+  User, Globe, Briefcase, FileText, Landmark, FileCheck, RefreshCw, MessageCircle
 } from 'lucide-react';
 
 // List of common countries for the select inputs
