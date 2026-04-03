@@ -322,6 +322,36 @@ const Admin: React.FC = () => {
     </div>
   );
 
+  const renderSkeletonMobile = () => (
+    <div className="animate-pulse p-8 space-y-6 border-b border-black/[0.1]">
+      <div className="flex justify-between items-start">
+        <div className="space-y-2 flex-1">
+          <div className="h-6 bg-slate-200 rounded-sm w-3/4"></div>
+          <div className="h-3 bg-slate-100 rounded-sm w-1/4"></div>
+        </div>
+        <div className="h-6 bg-slate-100 rounded-full w-16"></div>
+      </div>
+      <div className="space-y-3">
+        <div className="h-4 bg-slate-100 rounded-sm w-1/2"></div>
+        <div className="h-3 bg-slate-50 rounded-sm w-1/3"></div>
+      </div>
+    </div>
+  );
+
+  const renderSkeletonDesktop = () => (
+    <tr className="animate-pulse">
+      <td className="px-10 py-8">
+        <div className="h-5 bg-slate-200 rounded-sm w-32 mb-2"></div>
+        <div className="h-3 bg-slate-100 rounded-sm w-20"></div>
+      </td>
+      <td className="px-10 py-8"><div className="h-4 bg-slate-100 rounded-sm w-24"></div></td>
+      <td className="px-10 py-8"><div className="h-4 bg-slate-100 rounded-sm w-24"></div></td>
+      <td className="px-10 py-8"><div className="h-4 bg-slate-50 rounded-sm w-28"></div></td>
+      <td className="px-10 py-8"><div className="h-8 bg-slate-100 rounded-full w-24 mx-auto"></div></td>
+      <td className="px-10 py-8 text-right"><div className="h-10 bg-slate-50 rounded-sm w-10 ml-auto"></div></td>
+    </tr>
+  );
+
   return (
     <div className="min-h-screen bg-white flex flex-col lg:flex-row antialiased text-[#0D1B2A]">
       <AnimatePresence>
@@ -390,7 +420,11 @@ const Admin: React.FC = () => {
                   {/* MOBILE LIST */}
                   <div className="lg:hidden divide-y divide-black/[0.1]">
                      {loading ? (
-                        <div className="p-10 text-center text-[15px] text-black/60 font-semibold uppercase tracking-widest">Synchronisation...</div>
+                        Array.from({ length: 8 }).map((_, i) => (
+                          <React.Fragment key={i}>
+                            {renderSkeletonMobile()}
+                          </React.Fragment>
+                        ))
                      ) : paginatedEvaluations.map((e) => (
                          <div key={e.id} onClick={() => handleToggleRow(e.id)} className="p-8 space-y-5 bg-white active:bg-slate-50 border-b border-black/[0.1] transition-colors cursor-pointer">
                             <div className="flex items-center justify-between">
@@ -464,7 +498,13 @@ const Admin: React.FC = () => {
                            </tr>
                         </thead>
                          <tbody className="divide-y divide-black/[0.05]">
-                            {paginatedEvaluations.map((e) => (
+                            {loading ? (
+                               Array.from({ length: 8 }).map((_, i) => (
+                                 <React.Fragment key={i}>
+                                   {renderSkeletonDesktop()}
+                                 </React.Fragment>
+                               ))
+                            ) : paginatedEvaluations.map((e) => (
                                <React.Fragment key={e.id}>
                                  <tr onClick={() => handleToggleRow(e.id)} className={`hover:bg-slate-50 group transition-colors cursor-pointer ${expandedId === e.id ? 'bg-slate-50' : ''}`}>
                                     <td className="px-10 py-8">
@@ -533,7 +573,7 @@ const Admin: React.FC = () => {
                   </div>
 
                   {/* PAGINATION STYLE FACTURE */}
-                  {filteredEvaluations.length > 0 && (
+                  {!loading && filteredEvaluations.length > 0 && (
                     <div className="flex flex-col sm:flex-row items-center justify-between border-t border-black/[0.05] bg-white px-6 py-4 sm:px-10 mt-4 gap-4">
                       <div className="w-full sm:w-auto flex justify-between sm:justify-start items-center gap-4">
                         <p className="text-[13px] text-gray-700">
