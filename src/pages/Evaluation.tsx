@@ -69,17 +69,29 @@ const Evaluation: React.FC = () => {
   });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  useEffect(() => {
-    const fetchConfig = async () => {
-      const { data } = await supabase.from('tolito_espagne_immigration_whatsapp_config').select('*').single();
+  const fetchConfig = async () => {
+    try {
+      const { data } = await supabase.from('tolito_espagne_immigration_whatsapp_config')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
       if (data) {
         setWaConfig({ 
-          phone: data.phone_number, 
+          phone: data.phone_number.replace(/\D/g, ''), 
           message: data.message_template_study || "Bonjour, je viens de remplir le formulaire de dossier sur le site et je souhaiterais connaître les frais d'étude.",
           successText: data.message_template_processing || "Votre dossier a été transmis à nos experts. Pour finaliser votre demande et régler les frais d'étude et d'accompagnement, veuillez nous contacter directement sur WhatsApp."
         });
+        return data; // Return data so we can use it right after submission
       }
-    };
+    } catch (err) {
+      console.error("Erreur lors de la récupération de la configuration WhatsApp:", err);
+    }
+    return null;
+  };
+
+  useEffect(() => {
     fetchConfig();
   }, []);
 
@@ -192,7 +204,7 @@ const Evaluation: React.FC = () => {
       situation: formData.situation,
       message: formData.message,
       checked_documents: Object.keys(checkedDocs).filter(key => checkedDocs[key]),
-      status: 'pending'
+      status: 'En attente' // Use the same label as in admin for consistency
     };
 
     console.log("SUBMITTING TO SUPABASE:", submissionData);
@@ -203,8 +215,22 @@ const Evaluation: React.FC = () => {
         console.error("Supabase submission error:", error);
         throw error;
       }
-      console.log("SUBMISSION SUCCESSFUL!");
+      
+      console.log("SUBMISSION SUCCESSFUL! REFTECHING CONFIG...");
+      
+      // Wait for the latest config from database before stopping the loader
+      const latestConfig = await fetchConfig();
+      
+      if (latestConfig) {
+        setWaConfig({ 
+          phone: latestConfig.phone_number.replace(/\D/g, ''), 
+          message: latestConfig.message_template_study || waConfig.message,
+          successText: latestConfig.message_template_processing || waConfig.successText
+        });
+      }
+
       setIsSubmitted(true);
+      setToast({ message: "Votre dossier a été soumis avec succès.", type: 'success' });
     } catch (err: any) {
       console.error("General submission error:", err);
       setToast({ message: "Échec de l'envoi. Veuillez vérifier votre connexion.", type: 'error' });
@@ -642,7 +668,7 @@ const Evaluation: React.FC = () => {
                         <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
                            <CheckCircle2 size={40} />
                         </div>
-                        <h2 className="font-serif text-[28px] text-[#0D1B2A]">Demande Reçue !</h2>
+                        <h2 className="font-serif text-[28px] text-[#0D1B2A]">Demande Reçue</h2>
                         <p className="text-[#5A677D] text-[15px] leading-relaxed">
                           {waConfig.successText}
                         </p>

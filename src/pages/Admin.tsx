@@ -111,6 +111,7 @@ const Admin: React.FC = () => {
       setEvaluations(evals || []);
       
       const { data: waData } = await supabase.from('tolito_espagne_immigration_whatsapp_config').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle();
+      console.log('Admin: WhatsApp data from DB:', waData);
       if (waData) setWhatsAppConfig(waData);
       
       const { data: siteData } = await supabase.from('tolito_espagne_immigration_site_settings').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle();
@@ -622,6 +623,14 @@ const Admin: React.FC = () => {
                         <div className="space-y-2">
                            <label className="text-[9px] font-bold uppercase text-black/50 tracking-widest">WhatsApp Numéro</label>
                            <input value={whatsAppConfig.phone_number} onChange={e=>setWhatsAppConfig({...whatsAppConfig,phone_number:e.target.value})} className="w-full bg-white border border-black/[0.08] px-5 py-3 text-[14px] font-bold text-[#0D1B2A] outline-none" />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[9px] font-bold uppercase text-black/50 tracking-widest">Message Étude de Dossier</label>
+                           <textarea value={whatsAppConfig.message_template_study} onChange={e=>setWhatsAppConfig({...whatsAppConfig,message_template_study:e.target.value})} rows={3} className="w-full bg-white border border-black/[0.08] px-5 py-3 text-[14px] font-medium text-[#0D1B2A] outline-none focus:border-[#C9A84C] transition-colors rounded-sm" />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[9px] font-bold uppercase text-black/50 tracking-widest">Message Travail en cours</label>
+                           <textarea value={whatsAppConfig.message_template_processing} onChange={e=>setWhatsAppConfig({...whatsAppConfig,message_template_processing:e.target.value})} rows={3} className="w-full bg-white border border-black/[0.08] px-5 py-3 text-[14px] font-medium text-[#0D1B2A] outline-none focus:border-[#C9A84C] transition-colors rounded-sm" />
                         </div>
                      </div>
                   </div>
