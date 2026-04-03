@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X, ChevronDown, Mail, Phone, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabase';
 
 const NAV_DROPDOWNS = [
   {
@@ -44,6 +45,29 @@ const NAV_DROPDOWNS = [
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [siteSettings, setSiteSettings] = useState({
+    site_email: 'contact@espana-immigration.com',
+    site_phone: '+34 600 000 000'
+  });
+
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from('tolito_espagne_immigration_site_settings')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (data) {
+        setSiteSettings({
+          site_email: data.site_email || '',
+          site_phone: data.site_phone || ''
+        });
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const toggleDropdown = (label: string) => {
     setOpenDropdown(openDropdown === label ? null : label);
@@ -62,11 +86,11 @@ const Navbar: React.FC = () => {
           <div className="flex gap-7">
             <span className="flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-[#E8C97A]" />
-              <a href="mailto:contact@espana-immigration.com" className="text-[#E8C97A]">contact@espana-immigration.com</a>
+              <a href={`mailto:${siteSettings.site_email}`} className="text-[#E8C97A]">{siteSettings.site_email}</a>
             </span>
             <span className="flex items-center gap-1.5">
               <Phone className="w-3.5 h-3.5 text-[#E8C97A]" />
-              <a href="tel:+34600000000" className="text-[#E8C97A]">+34 600 000 000</a>
+              <a href={`tel:${siteSettings.site_phone.replace(/\s+/g, '')}`} className="text-[#E8C97A]">{siteSettings.site_phone}</a>
             </span>
           </div>
         </div>

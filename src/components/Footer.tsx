@@ -1,8 +1,35 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Clock, MessageCircle, Briefcase, Camera, Play, Star, ChevronRight } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const Footer: React.FC = () => {
+  const [siteSettings, setSiteSettings] = React.useState({
+    site_email: '',
+    site_phone: '',
+    site_address: ''
+  });
+
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from('tolito_espagne_immigration_site_settings')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setSiteSettings({
+          site_email: data.site_email || '',
+          site_phone: data.site_phone || '',
+          site_address: data.site_address || ''
+        });
+      }
+    };
+    fetchSettings();
+  }, []);
+
   return (
     <footer className="bg-navy pt-[70px]">
       <div className="max-w-[1280px] mx-auto px-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-14 pb-14 border-b border-white/8">
@@ -77,27 +104,27 @@ const Footer: React.FC = () => {
 
         <div className="flex flex-col gap-4">
            <div className="text-[11px] font-bold tracking-[0.18em] text-gold uppercase mb-5">Contact</div>
-           <div className="flex gap-3 items-start">
-              <MapPin className="text-gold w-4 h-4 mt-0.5 shrink-0" />
-              <div className="text-[13.5px] text-white/50 leading-relaxed">
-                 <strong className="block text-white/80 text-[12px] tracking-wide mb-1 uppercase">Adresse</strong>
-                 Calle Gran Vía 48, Madrid, Espagne
-              </div>
-           </div>
-           <div className="flex gap-3 items-start">
-              <Phone className="text-gold w-4 h-4 mt-0.5 shrink-0" />
-              <div className="text-[13.5px] text-white/50 leading-relaxed">
-                 <strong className="block text-white/80 text-[12px] tracking-wide mb-1 uppercase">Téléphone</strong>
-                 +34 600 000 000
-              </div>
-           </div>
-           <div className="flex gap-3 items-start">
-              <Mail className="text-gold w-4 h-4 mt-0.5 shrink-0" />
-              <div className="text-[13.5px] text-white/50 leading-relaxed">
-                 <strong className="block text-white/80 text-[12px] tracking-wide mb-1 uppercase">Email</strong>
-                 contact@espana-immigration.com
-              </div>
-           </div>
+            <div className="flex gap-3 items-start">
+               <MapPin className="text-gold w-4 h-4 mt-0.5 shrink-0" />
+               <div className="text-[13.5px] text-white/50 leading-relaxed">
+                  <strong className="block text-white/80 text-[12px] tracking-wide mb-1 uppercase">Adresse</strong>
+                  {siteSettings.site_address}
+               </div>
+            </div>
+            <div className="flex gap-3 items-start">
+               <Phone className="text-gold w-4 h-4 mt-0.5 shrink-0" />
+               <div className="text-[13.5px] text-white/50 leading-relaxed">
+                  <strong className="block text-white/80 text-[12px] tracking-wide mb-1 uppercase">Téléphone</strong>
+                  {siteSettings.site_phone}
+               </div>
+            </div>
+            <div className="flex gap-3 items-start">
+               <Mail className="text-gold w-4 h-4 mt-0.5 shrink-0" />
+               <div className="text-[13.5px] text-white/50 leading-relaxed">
+                  <strong className="block text-white/80 text-[12px] tracking-wide mb-1 uppercase">Email</strong>
+                  {siteSettings.site_email}
+               </div>
+            </div>
            <div className="flex gap-3 items-start">
               <Clock className="text-gold w-4 h-4 mt-0.5 shrink-0" />
               <div className="text-[13.5px] text-white/50 leading-relaxed">
