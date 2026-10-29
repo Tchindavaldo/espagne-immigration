@@ -137,7 +137,7 @@ const Footer: React.FC = () => {
 
       <div className="max-w-[1280px] mx-auto px-10 py-[22px] flex flex-col sm:flex-row justify-between items-center gap-3">
          <div className="text-[12.5px] text-white/35">
-            © 2025 España Immigration. Tous droits réservés. <Link to="#" className="text-gold-light hover:underline ml-1">Confidentialité</Link>
+            © 2025 España Immigration. Tous droits réservés. Site réalisé par <a href="https://rauval.com" target="_blank" rel="noopener" className="text-gold-light hover:underline">Rauval</a>. <Link to="#" className="text-gold-light hover:underline ml-1">Confidentialité</Link>
          </div>
          <div className="flex gap-6 text-[12.5px] text-white/35">
             <Link to="/about" className="hover:text-gold-light transition-colors">À propos</Link>
